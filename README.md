@@ -2,7 +2,7 @@
 
 Home Assistant custom integration that fetches **live pollen data** for Denmark from **Astma-Allergi Danmarks** official JSON feed.
 
-> **Data source:** `https://www.astma-allergi.dk/umbraco/Api/PollenApi/GetPollenFeed`  
+> **Data source:** `https://www.astma-allergi.dk/umbraco/Api/PollenApi/GetPollenFeed`
 > This is the same backend used by Astma-Allergi Danmarks own app and website — not a scraper.
 
 > **Disclaimer:** This integration is an independent community project and is not affiliated with, endorsed by, or in any way connected to Astma-Allergi Danmark.
@@ -57,7 +57,7 @@ The **overall severity sensor** includes:
 ### Via HACS (recommended)
 
 1. In HACS → Integrations → ⋮ menu → **Custom repositories**
-2. Add `https://github.com/YOUR_USERNAME/pollen_dk` as type **Integration**
+2. Add `https://github.com/briis/pollen_dk` as type **Integration**
 3. Install **Pollen DK**
 4. Restart Home Assistant
 
