@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from homeassistant.const import STATE_UNKNOWN
 from homeassistant.helpers import entity_registry as er
 
 from custom_components.pollen_dk.const import DOMAIN, POLLEN_TYPES
@@ -50,11 +49,11 @@ async def test_birk_count_sensor_value(hass, setup_integration) -> None:
     assert state.state == "186"
 
 
-async def test_out_of_season_count_sensor_is_unknown(hass, setup_integration) -> None:
+async def test_out_of_season_count_sensor_is_zero(hass, setup_integration) -> None:
     entity_id = _entity_id(hass, f"{DOMAIN}_koebenhavn_graes_count")
     state = hass.states.get(entity_id)
     assert state is not None
-    assert state.state == STATE_UNKNOWN
+    assert state.state == "0"
 
 
 async def test_count_sensor_severity_attribute(hass, setup_integration) -> None:
@@ -71,7 +70,7 @@ async def test_count_sensor_metadata_attributes(hass, setup_integration) -> None
     assert "København" in attrs["region"]
 
 
-async def test_count_sensor_unknown_when_no_region_data(
+async def test_count_sensor_zero_when_no_region_data(
     hass, mock_config_entry
 ) -> None:
     mock_config_entry.add_to_hass(hass)
@@ -87,7 +86,7 @@ async def test_count_sensor_unknown_when_no_region_data(
     if entity_id:
         state = hass.states.get(entity_id)
         if state:
-            assert state.state in (STATE_UNKNOWN, "unavailable")
+            assert state.state in ("0", "unavailable")
 
 
 # ── Severity sensor state ─────────────────────────────────────────────────────

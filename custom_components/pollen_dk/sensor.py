@@ -116,15 +116,15 @@ class PollenCountSensor(PollenBaseSensor):
         self._attr_icon = POLLEN_ICONS.get(pollen_key, "mdi:flower-pollen")
 
     @property
-    def native_value(self) -> int | None:
+    def native_value(self) -> int:
         """Return the pollen count."""
         region_data = self._region_data
         if region_data is None:
-            return None
+            return 0
         pollen_data = region_data.get(self._pollen_key)
         if pollen_data is None:
-            return None
-        return pollen_data.get("count")
+            return 0
+        return pollen_data.get("count") or 0
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
