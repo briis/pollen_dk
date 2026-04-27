@@ -39,10 +39,10 @@ POLLEN_ICONS = {
 }
 
 SEVERITY_ICONS = {
-    "ingen": "mdi:flower-pollen-outline",
-    "lav": "mdi:flower-pollen",
-    "moderat": "mdi:flower-pollen",
-    "høj": "mdi:alert",
-    "meget høj": "mdi:alert-circle",
-    "ukendt": "mdi:help-circle-outline",
+    "none": "mdi:flower-pollen-outline",
+    "low": "mdi:flower-pollen",
+    "moderate": "mdi:flower-pollen",
+    "high": "mdi:alert",
+    "very_high": "mdi:alert-circle",
+    "unknown": "mdi:help-circle-outline",
 }

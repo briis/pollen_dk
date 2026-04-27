@@ -62,61 +62,61 @@ _ALLERGEN_ID_TO_KEY: dict[str, str] = {
 # Severity thresholds (grains/m³) - based on Astma-Allergi Danmark guidelines
 SEVERITY_LEVELS = {
     "birk": [
-        (0, "ingen"),
-        (5, "lav"),
-        (50, "moderat"),
-        (500, "høj"),
-        (float("inf"), "meget høj"),
+        (0, "none"),
+        (5, "low"),
+        (50, "moderate"),
+        (500, "high"),
+        (float("inf"), "very_high"),
     ],
     "graes": [
-        (0, "ingen"),
-        (5, "lav"),
-        (50, "moderat"),
-        (500, "høj"),
-        (float("inf"), "meget høj"),
+        (0, "none"),
+        (5, "low"),
+        (50, "moderate"),
+        (500, "high"),
+        (float("inf"), "very_high"),
     ],
     "el": [
-        (0, "ingen"),
-        (5, "lav"),
-        (50, "moderat"),
-        (200, "høj"),
-        (float("inf"), "meget høj"),
+        (0, "none"),
+        (5, "low"),
+        (50, "moderate"),
+        (200, "high"),
+        (float("inf"), "very_high"),
     ],
     "hassel": [
-        (0, "ingen"),
-        (5, "lav"),
-        (50, "moderat"),
-        (200, "høj"),
-        (float("inf"), "meget høj"),
+        (0, "none"),
+        (5, "low"),
+        (50, "moderate"),
+        (200, "high"),
+        (float("inf"), "very_high"),
     ],
     "bynke": [
-        (0, "ingen"),
-        (5, "lav"),
-        (10, "moderat"),
-        (30, "høj"),
-        (float("inf"), "meget høj"),
+        (0, "none"),
+        (5, "low"),
+        (10, "moderate"),
+        (30, "high"),
+        (float("inf"), "very_high"),
     ],
     "elm": [
-        (0, "ingen"),
-        (5, "lav"),
-        (50, "moderat"),
-        (200, "høj"),
-        (float("inf"), "meget høj"),
+        (0, "none"),
+        (5, "low"),
+        (50, "moderate"),
+        (200, "high"),
+        (float("inf"), "very_high"),
     ],
     # Mold spores use different scale
     "alternaria": [
-        (0, "ingen"),
-        (100, "lav"),
-        (1000, "moderat"),
-        (5000, "høj"),
-        (float("inf"), "meget høj"),
+        (0, "none"),
+        (100, "low"),
+        (1000, "moderate"),
+        (5000, "high"),
+        (float("inf"), "very_high"),
     ],
     "cladosporium": [
-        (0, "ingen"),
-        (3000, "lav"),
-        (10000, "moderat"),
-        (50000, "høj"),
-        (float("inf"), "meget høj"),
+        (0, "none"),
+        (3000, "low"),
+        (10000, "moderate"),
+        (50000, "high"),
+        (float("inf"), "very_high"),
     ],
 }
 
@@ -124,12 +124,12 @@ SEVERITY_LEVELS = {
 def get_severity(pollen_type: str, count: int | None) -> str:
     """Return severity label for a given pollen count."""
     if count is None or count < 0:
-        return "ukendt"
+        return "unknown"
     thresholds = SEVERITY_LEVELS.get(pollen_type, SEVERITY_LEVELS["birk"])
     for threshold, label in thresholds:
         if count <= threshold:
             return label
-    return "meget høj"
+    return "very_high"
 
 
 class PollenDKApiError(Exception):
@@ -150,7 +150,7 @@ class PollenDKApi:
         Returns a dict structured as:
         {
           "koebenhavn": {
-              "birk": {"count": 42, "severity": "moderat", "forecast": "..."},
+              "birk": {"count": 42, "severity": "moderate", "forecast": "..."},
               "graes": {...},
               ...
               "last_update": "...",

@@ -134,7 +134,7 @@ class PollenCountSensor(PollenBaseSensor):
             return {}
         pollen_data = region_data.get(self._pollen_key, {})
         return {
-            "severity": pollen_data.get("severity", "ukendt"),
+            "severity": pollen_data.get("severity", "unknown"),
             "pollen_type_da": POLLEN_TYPES[self._pollen_key],
             "pollen_type_en": pollen_data.get("name_en", ""),
             "last_update": region_data.get("last_update", ""),
@@ -146,13 +146,15 @@ class PollenCountSensor(PollenBaseSensor):
 class PollenSeveritySensor(PollenBaseSensor):
     """Sensor reporting the overall worst severity level for a region."""
 
+    _attr_translation_key = "pollen_severity"
+
     SEVERITY_ORDER: ClassVar[list[str]] = [
-        "ukendt",
-        "ingen",
-        "lav",
-        "moderat",
-        "høj",
-        "meget høj",
+        "unknown",
+        "none",
+        "low",
+        "moderate",
+        "high",
+        "very_high",
     ]
 
     def __init__(
@@ -178,7 +180,7 @@ class PollenSeveritySensor(PollenBaseSensor):
         worst_idx = 0
         for pollen_key in POLLEN_TYPES:
             pollen_data = region_data.get(pollen_key, {})
-            severity = pollen_data.get("severity", "ukendt")
+            severity = pollen_data.get("severity", "unknown")
             try:
                 idx = self.SEVERITY_ORDER.index(severity)
             except ValueError:
@@ -190,7 +192,7 @@ class PollenSeveritySensor(PollenBaseSensor):
     @property
     def icon(self) -> str:
         """Return icon based on severity."""
-        return SEVERITY_ICONS.get(self.native_value or "ukendt", "mdi:flower-pollen")
+        return SEVERITY_ICONS.get(self.native_value or "unknown", "mdi:flower-pollen")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -206,7 +208,7 @@ class PollenSeveritySensor(PollenBaseSensor):
             if count is not None:
                 severities[POLLEN_TYPES[pollen_key]] = {
                     "count": count,
-                    "severity": pollen_data.get("severity", "ukendt"),
+                    "severity": pollen_data.get("severity", "unknown"),
                 }
 
         return {

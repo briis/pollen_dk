@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Pollen DK – Astma-Allergi Danmark",
+        "title": "Pollen DK - Astma-Allergi Danmark",
         "description": "Henter daglige pollenmålinger fra Astma-Allergi Danmarks målestation(er). Data opdateres én gang dagligt ca. kl. 16.00.",
         "data": {
           "region": "Region"
@@ -15,6 +15,20 @@
     },
     "abort": {
       "already_configured": "Denne region er allerede konfigureret."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "pollen_severity": {
+        "state": {
+          "unknown": "Ukendt",
+          "none": "Ingen",
+          "low": "Lav",
+          "moderate": "Moderat",
+          "high": "Høj",
+          "very_high": "Meget høj"
+        }
+      }
     }
   }
 }
