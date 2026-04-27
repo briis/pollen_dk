@@ -1,18 +1,15 @@
 """Sensor platform for Pollen DK integration."""
+
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from homeassistant.components.sensor import (
     SensorEntity,
-    SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -29,6 +26,11 @@ from .const import (
 )
 from .coordinator import PollenDKCoordinator
 
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -41,21 +43,18 @@ async def async_setup_entry(
     coordinator: PollenDKCoordinator = hass.data[DOMAIN][entry.entry_id]
     selected_region = entry.data[CONF_REGION]
 
+    regions_to_use = (
+        [REGION_KOEBENHAVN, REGION_VIBORG]
+        if selected_region == REGION_BOTH
+        else [selected_region]
+    )
+
     entities: list[SensorEntity] = []
-
-    # Determine which regions to create sensors for
-    if selected_region == REGION_BOTH:
-        regions_to_use = [REGION_KOEBENHAVN, REGION_VIBORG]
-    else:
-        regions_to_use = [selected_region]
-
     for region_key in regions_to_use:
-        # One count sensor per pollen type per region
-        for pollen_key in POLLEN_TYPES:
-            entities.append(
-                PollenCountSensor(coordinator, region_key, pollen_key)
-            )
-        # One overall severity sensor per region
+        entities.extend(
+            PollenCountSensor(coordinator, region_key, pollen_key)
+            for pollen_key in POLLEN_TYPES
+        )
         entities.append(PollenSeveritySensor(coordinator, region_key))
 
     async_add_entities(entities)
@@ -72,13 +71,14 @@ class PollenBaseSensor(CoordinatorEntity[PollenDKCoordinator], SensorEntity):
         coordinator: PollenDKCoordinator,
         region_key: str,
     ) -> None:
+        """Initialise the base sensor for a given region."""
         super().__init__(coordinator)
         self._region_key = region_key
         region_name = REGIONS[region_key]
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, region_key)},
-            name=f"Pollen DK – {region_name}",
+            name=f"Pollen DK - {region_name}",
             manufacturer="Astma-Allergi Danmark",
             model="Pollenmålestation",
             configuration_url="https://www.astma-allergi.dk/dagenspollental",
@@ -104,6 +104,7 @@ class PollenCountSensor(PollenBaseSensor):
         region_key: str,
         pollen_key: str,
     ) -> None:
+        """Initialise the count sensor for a specific pollen type and region."""
         super().__init__(coordinator, region_key)
         self._pollen_key = pollen_key
 
@@ -145,13 +146,21 @@ class PollenCountSensor(PollenBaseSensor):
 class PollenSeveritySensor(PollenBaseSensor):
     """Sensor reporting the overall worst severity level for a region."""
 
-    SEVERITY_ORDER = ["ingen", "lav", "moderat", "høj", "meget høj", "ukendt"]
+    SEVERITY_ORDER: ClassVar[list[str]] = [
+        "ingen",
+        "lav",
+        "moderat",
+        "høj",
+        "meget høj",
+        "ukendt",
+    ]
 
     def __init__(
         self,
         coordinator: PollenDKCoordinator,
         region_key: str,
     ) -> None:
+        """Initialise the overall severity sensor for a region."""
         super().__init__(coordinator, region_key)
         region_name = REGIONS[region_key]
 
@@ -174,8 +183,7 @@ class PollenSeveritySensor(PollenBaseSensor):
                 idx = self.SEVERITY_ORDER.index(severity)
             except ValueError:
                 idx = 0
-            if idx > worst_idx:
-                worst_idx = idx
+            worst_idx = max(worst_idx, idx)
 
         return self.SEVERITY_ORDER[worst_idx]
 

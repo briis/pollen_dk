@@ -1,11 +1,15 @@
-"""Pollen DK – Home Assistant integration for Astma-Allergi Danmark pollen data."""
+"""Pollen DK - Home Assistant integration for Astma-Allergi Danmark pollen data."""
+
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
 
 from .api import PollenDKApi
 from .const import DOMAIN

@@ -1,4 +1,5 @@
 """API client for Astma-Allergi Danmark pollen data."""
+
 from __future__ import annotations
 
 import logging
@@ -59,15 +60,63 @@ _ALLERGEN_ID_TO_KEY: dict[str, str] = {
 
 # Severity thresholds (grains/m³) - based on Astma-Allergi Danmark guidelines
 SEVERITY_LEVELS = {
-    "birk": [(0, "ingen"), (5, "lav"), (50, "moderat"), (500, "høj"), (float("inf"), "meget høj")],
-    "graes": [(0, "ingen"), (5, "lav"), (50, "moderat"), (500, "høj"), (float("inf"), "meget høj")],
-    "el": [(0, "ingen"), (5, "lav"), (50, "moderat"), (200, "høj"), (float("inf"), "meget høj")],
-    "hassel": [(0, "ingen"), (5, "lav"), (50, "moderat"), (200, "høj"), (float("inf"), "meget høj")],
-    "bynke": [(0, "ingen"), (5, "lav"), (10, "moderat"), (30, "høj"), (float("inf"), "meget høj")],
-    "elm": [(0, "ingen"), (5, "lav"), (50, "moderat"), (200, "høj"), (float("inf"), "meget høj")],
+    "birk": [
+        (0, "ingen"),
+        (5, "lav"),
+        (50, "moderat"),
+        (500, "høj"),
+        (float("inf"), "meget høj"),
+    ],
+    "graes": [
+        (0, "ingen"),
+        (5, "lav"),
+        (50, "moderat"),
+        (500, "høj"),
+        (float("inf"), "meget høj"),
+    ],
+    "el": [
+        (0, "ingen"),
+        (5, "lav"),
+        (50, "moderat"),
+        (200, "høj"),
+        (float("inf"), "meget høj"),
+    ],
+    "hassel": [
+        (0, "ingen"),
+        (5, "lav"),
+        (50, "moderat"),
+        (200, "høj"),
+        (float("inf"), "meget høj"),
+    ],
+    "bynke": [
+        (0, "ingen"),
+        (5, "lav"),
+        (10, "moderat"),
+        (30, "høj"),
+        (float("inf"), "meget høj"),
+    ],
+    "elm": [
+        (0, "ingen"),
+        (5, "lav"),
+        (50, "moderat"),
+        (200, "høj"),
+        (float("inf"), "meget høj"),
+    ],
     # Mold spores use different scale
-    "alternaria": [(0, "ingen"), (100, "lav"), (1000, "moderat"), (5000, "høj"), (float("inf"), "meget høj")],
-    "cladosporium": [(0, "ingen"), (3000, "lav"), (10000, "moderat"), (50000, "høj"), (float("inf"), "meget høj")],
+    "alternaria": [
+        (0, "ingen"),
+        (100, "lav"),
+        (1000, "moderat"),
+        (5000, "høj"),
+        (float("inf"), "meget høj"),
+    ],
+    "cladosporium": [
+        (0, "ingen"),
+        (3000, "lav"),
+        (10000, "moderat"),
+        (50000, "høj"),
+        (float("inf"), "meget høj"),
+    ],
 }
 
 
@@ -90,10 +139,12 @@ class PollenDKApi:
     """Client for Astma-Allergi Danmark pollen JSON feed."""
 
     def __init__(self, session: aiohttp.ClientSession) -> None:
+        """Initialise the API client with an aiohttp session."""
         self._session = session
 
     async def async_get_pollen_data(self) -> dict[str, Any]:
-        """Fetch and parse pollen data from the API.
+        """
+        Fetch and parse pollen data from the API.
 
         Returns a dict structured as:
         {
@@ -116,13 +167,14 @@ class PollenDKApi:
                 response.raise_for_status()
                 data = await response.json(content_type=None)
         except aiohttp.ClientResponseError as err:
-            raise PollenDKApiError(
-                f"HTTP error fetching pollen data: {err.status} {err.message}"
-            ) from err
+            msg = f"HTTP error fetching pollen data: {err.status} {err.message}"
+            raise PollenDKApiError(msg) from err
         except aiohttp.ClientError as err:
-            raise PollenDKApiError(f"Network error fetching pollen data: {err}") from err
+            msg = f"Network error fetching pollen data: {err}"
+            raise PollenDKApiError(msg) from err
         except Exception as err:
-            raise PollenDKApiError(f"Unexpected error fetching pollen data: {err}") from err
+            msg = f"Unexpected error fetching pollen data: {err}"
+            raise PollenDKApiError(msg) from err
 
         return self._parse_response(data)
 
@@ -131,27 +183,23 @@ class PollenDKApi:
         """Recursively unwrap a Firestore REST value node into a plain Python value."""
         if not isinstance(node, dict):
             return node
-        if "stringValue" in node:
-            return node["stringValue"]
-        if "integerValue" in node:
-            return int(node["integerValue"])
-        if "doubleValue" in node:
-            return float(node["doubleValue"])
-        if "booleanValue" in node:
-            return node["booleanValue"]
-        if "nullValue" in node:
-            return None
         if "mapValue" in node:
             fields = node["mapValue"].get("fields") or {}
             return {k: PollenDKApi._firestore_value(v) for k, v in fields.items()}
         if "arrayValue" in node:
             values = node["arrayValue"].get("values") or []
             return [PollenDKApi._firestore_value(v) for v in values]
-        # Treat an unknown node shape as a plain nested dict
+        for key, cast in (("integerValue", int), ("doubleValue", float)):
+            if key in node:
+                return cast(node[key])
+        for key in ("stringValue", "booleanValue", "nullValue"):
+            if key in node:
+                return node[key]
         return {k: PollenDKApi._firestore_value(v) for k, v in node.items()}
 
     def _parse_response(self, data: Any) -> dict[str, Any]:
-        """Parse the Firestore REST response into a structured dict.
+        """
+        Parse the Firestore REST response into a structured dict.
 
         The API returns a single Firestore document.  Top-level numeric keys
         (48 = København, 49 = Viborg) are station IDs.  Inside each station the
@@ -171,7 +219,9 @@ class PollenDKApi:
         for station_id, station_node in raw_fields.items():
             region_key = _STATION_ID_TO_REGION.get(station_id)
             if region_key is None:
-                _LOGGER.debug("Unknown station ID in pollen API response: %s", station_id)
+                _LOGGER.debug(
+                    "Unknown station ID in pollen API response: %s", station_id
+                )
                 continue
 
             station = self._firestore_value(station_node)
@@ -210,13 +260,13 @@ class PollenDKApi:
                 }
 
             # Fill any missing pollen types so sensors always have an entry
-            for pollen_key in POLLEN_TYPES:
+            for pollen_key, pollen_name_en in POLLEN_TYPES.items():
                 if pollen_key not in region_data:
                     region_data[pollen_key] = {
                         "count": None,
                         "severity": get_severity(pollen_key, None),
                         "name_da": pollen_key,
-                        "name_en": POLLEN_TYPES[pollen_key],
+                        "name_en": pollen_name_en,
                     }
 
             result[region_key] = region_data
