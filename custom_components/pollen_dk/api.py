@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -165,7 +166,9 @@ class PollenDKApi:
                 timeout=aiohttp.ClientTimeout(total=30),
             ) as response:
                 response.raise_for_status()
-                data = await response.json(content_type=None)
+                raw = await response.json(content_type=None)
+                # The endpoint wraps the Firestore document in an extra JSON string
+                data = json.loads(raw) if isinstance(raw, str) else raw
         except aiohttp.ClientResponseError as err:
             msg = f"HTTP error fetching pollen data: {err.status} {err.message}"
             raise PollenDKApiError(msg) from err
