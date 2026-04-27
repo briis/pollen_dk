@@ -70,9 +70,7 @@ async def test_count_sensor_metadata_attributes(hass, setup_integration) -> None
     assert "København" in attrs["region"]
 
 
-async def test_count_sensor_zero_when_no_region_data(
-    hass, mock_config_entry
-) -> None:
+async def test_count_sensor_zero_when_no_region_data(hass, mock_config_entry) -> None:
     mock_config_entry.add_to_hass(hass)
     # Return data that has no koebenhavn key
     with patch(
