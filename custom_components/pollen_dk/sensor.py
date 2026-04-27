@@ -147,12 +147,12 @@ class PollenSeveritySensor(PollenBaseSensor):
     """Sensor reporting the overall worst severity level for a region."""
 
     SEVERITY_ORDER: ClassVar[list[str]] = [
+        "ukendt",
         "ingen",
         "lav",
         "moderat",
         "høj",
         "meget høj",
-        "ukendt",
     ]
 
     def __init__(
