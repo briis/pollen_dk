@@ -39,6 +39,24 @@ REGIONS = {
     "viborg": "Viborg (Vestdanmark)",
 }
 
+# Firestore station ID → region key (from the select#box1 on astma-allergi.dk)
+_STATION_ID_TO_REGION: dict[str, str] = {
+    "48": "koebenhavn",
+    "49": "viborg",
+}
+
+# Firestore pollen type ID → our internal key (from POLLEN_NAMES in pollen.js)
+_ALLERGEN_ID_TO_KEY: dict[str, str] = {
+    "7": "birk",
+    "31": "bynke",
+    "1": "el",
+    "4": "elm",
+    "28": "graes",
+    "2": "hassel",
+    "44": "alternaria",
+    "45": "cladosporium",
+}
+
 # Severity thresholds (grains/m³) - based on Astma-Allergi Danmark guidelines
 SEVERITY_LEVELS = {
     "birk": [(0, "ingen"), (5, "lav"), (50, "moderat"), (500, "høj"), (float("inf"), "meget høj")],
@@ -108,64 +126,98 @@ class PollenDKApi:
 
         return self._parse_response(data)
 
+    @staticmethod
+    def _firestore_value(node: Any) -> Any:
+        """Recursively unwrap a Firestore REST value node into a plain Python value."""
+        if not isinstance(node, dict):
+            return node
+        if "stringValue" in node:
+            return node["stringValue"]
+        if "integerValue" in node:
+            return int(node["integerValue"])
+        if "doubleValue" in node:
+            return float(node["doubleValue"])
+        if "booleanValue" in node:
+            return node["booleanValue"]
+        if "nullValue" in node:
+            return None
+        if "mapValue" in node:
+            fields = node["mapValue"].get("fields") or {}
+            return {k: PollenDKApi._firestore_value(v) for k, v in fields.items()}
+        if "arrayValue" in node:
+            values = node["arrayValue"].get("values") or []
+            return [PollenDKApi._firestore_value(v) for v in values]
+        # Treat an unknown node shape as a plain nested dict
+        return {k: PollenDKApi._firestore_value(v) for k, v in node.items()}
+
     def _parse_response(self, data: Any) -> dict[str, Any]:
-        """Parse the raw JSON API response into a structured dict."""
+        """Parse the Firestore REST response into a structured dict.
+
+        The API returns a single Firestore document.  Top-level numeric keys
+        (48 = København, 49 = Viborg) are station IDs.  Inside each station the
+        "data" map uses numeric allergen IDs (7 = birk, 28 = græs, …).
+        """
         result: dict[str, Any] = {}
 
-        if not isinstance(data, (list, dict)):
+        if not isinstance(data, dict):
             _LOGGER.warning("Unexpected pollen API response type: %s", type(data))
             return result
 
-        # The API returns a list of region objects
-        # Each item has a region identifier and pollen measurements
-        items = data if isinstance(data, list) else data.get("items", [data])
+        raw_fields = data.get("fields", {})
+        if not raw_fields:
+            _LOGGER.warning("Pollen API response has no 'fields' key")
+            return result
 
-        for item in items:
-            if not isinstance(item, dict):
+        for station_id, station_node in raw_fields.items():
+            region_key = _STATION_ID_TO_REGION.get(station_id)
+            if region_key is None:
+                _LOGGER.debug("Unknown station ID in pollen API response: %s", station_id)
                 continue
 
-            region_raw = str(item.get("region", item.get("Region", ""))).lower()
-            # Normalise: "københavn" -> "koebenhavn", "viborg" -> "viborg"
-            if "benhavn" in region_raw or "st" in region_raw or "øst" in region_raw:
-                region_key = "koebenhavn"
-            elif "viborg" in region_raw or "vest" in region_raw:
-                region_key = "viborg"
-            else:
-                _LOGGER.debug("Unknown region in API response: %s", region_raw)
-                # Use the raw key if unknown
-                region_key = region_raw or "unknown"
+            station = self._firestore_value(station_node)
+            if not isinstance(station, dict):
+                continue
+
+            date_str = station.get("date", "")
+            allergens_raw = station.get("data") or {}
 
             region_data: dict[str, Any] = {
-                "last_update": item.get("date", item.get("Date", item.get("lastUpdate", ""))),
-                "forecast_text": item.get("forecast", item.get("Forecast", "")),
+                "last_update": date_str,
+                "forecast_text": "",
             }
 
-            # Parse individual pollen counts
-            # The API may use either lowercase or PascalCase keys
-            for dk_key in POLLEN_TYPES:
-                # Try multiple possible key formats
-                count_value = (
-                    item.get(dk_key)
-                    or item.get(dk_key.capitalize())
-                    or item.get(dk_key.title())
-                    # "graes" might appear as "gras" or "grÃ¦s" in some responses
-                    or (item.get("graes") if dk_key == "graes" else None)
-                )
+            for allergen_id, allergen in allergens_raw.items():
+                pollen_key = _ALLERGEN_ID_TO_KEY.get(str(allergen_id))
+                if pollen_key is None:
+                    continue
+                if not isinstance(allergen, dict):
+                    continue
 
-                if count_value is not None:
-                    try:
-                        count = int(count_value)
-                    except (TypeError, ValueError):
-                        count = None
-                else:
+                raw_level = allergen.get("level")
+                in_season = allergen.get("inSeason", False)
+
+                # -1 means no measurement; also treat out-of-season as no data
+                if raw_level is None or int(raw_level) < 0 or not in_season:
                     count = None
+                else:
+                    count = int(raw_level)
 
-                region_data[dk_key] = {
+                region_data[pollen_key] = {
                     "count": count,
-                    "severity": get_severity(dk_key, count),
-                    "name_da": dk_key,
-                    "name_en": POLLEN_TYPES[dk_key],
+                    "severity": get_severity(pollen_key, count),
+                    "name_da": pollen_key,
+                    "name_en": POLLEN_TYPES[pollen_key],
                 }
+
+            # Fill any missing pollen types so sensors always have an entry
+            for pollen_key in POLLEN_TYPES:
+                if pollen_key not in region_data:
+                    region_data[pollen_key] = {
+                        "count": None,
+                        "severity": get_severity(pollen_key, None),
+                        "name_da": pollen_key,
+                        "name_en": POLLEN_TYPES[pollen_key],
+                    }
 
             result[region_key] = region_data
 
