@@ -1,9 +1,11 @@
-# Pollen DK – Home Assistant Integration
+# Pollen DK - Home Assistant Integration
 
 Home Assistant custom integration that fetches **live pollen data** for Denmark from **Astma-Allergi Danmarks** official JSON feed.
 
 > **Data source:** `https://www.astma-allergi.dk/umbraco/Api/PollenApi/GetPollenFeed`  
 > This is the same backend used by Astma-Allergi Danmarks own app and website — not a scraper.
+
+> **Disclaimer:** This integration is an independent community project and is not affiliated with, endorsed by, or in any way connected to Astma-Allergi Danmark.
 
 ---
 
@@ -37,7 +39,7 @@ For each configured region you get:
 | `sensor.pollen_dk_pollenvarsel_REGION` | Overall worst severity level |
 
 Each count sensor includes the following **attributes**:
-- `severity` — `ingen` / `lav` / `moderat` / `høj` / `meget høj`
+- `severity` — `none` / `low` / `moderate` / `high` / `very_high` / `unknown`
 - `pollen_type_da` — Danish name
 - `pollen_type_en` — English name
 - `last_update` — Date of last measurement
