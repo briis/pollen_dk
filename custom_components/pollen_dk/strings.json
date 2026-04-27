@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pollen DK – Astma-Allergi Danmark",
+        "description": "Henter daglige pollenmålinger fra Astma-Allergi Danmarks målestation(er). Data opdateres én gang dagligt ca. kl. 16.00.",
+        "data": {
+          "region": "Region"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kan ikke forbinde til Astma-Allergi Danmarks API. Tjek din internetforbindelse.",
+      "unknown": "Ukendt fejl opstod under opsætning."
+    },
+    "abort": {
+      "already_configured": "Denne region er allerede konfigureret."
+    }
+  }
+}

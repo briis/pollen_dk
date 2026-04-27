@@ -1,46 +1,88 @@
-# Notice
+# Pollen DK – Home Assistant Integration
 
-The component and platforms in this repository are not meant to be used by a
-user, but as a "blueprint" that custom component developers can build
-upon, to make more awesome stuff.
+Home Assistant custom integration that fetches **live pollen data** for Denmark from **Astma-Allergi Danmarks** official JSON feed.
 
-HAVE FUN! 😎
+> **Data source:** `https://www.astma-allergi.dk/umbraco/Api/PollenApi/GetPollenFeed`  
+> This is the same backend used by Astma-Allergi Danmarks own app and website — not a scraper.
 
-## Why?
+---
 
-This is simple, by having custom_components look (README + structure) the same
-it is easier for developers to help each other and for users to start using them.
+## Features
 
-If you are a developer and you want to add things to this "blueprint" that you think more
-developers will have use for, please open a PR to add it :)
+- **No scraping** — uses the official JSON API endpoint
+- **Two measurement stations**: København (Østdanmark) and Viborg (Vestdanmark)
+- **8 pollen/spore types**: Birk, Bynke, El, Elm, Græs, Hassel, Alternaria, Cladosporium
+- **Raw count sensors** (pollen/m³) with severity attribute for each type
+- **Overall severity sensor** per region (worst level across all types)
+- **Forecast text** attribute with next-day outlook
+- UI config flow — no YAML required
+- Updates every hour (data itself refreshes once daily ~16:00 CET)
 
-## What?
+---
 
-This repository contains multiple files, here is a overview:
+## Sensors created
 
-File | Purpose | Documentation
--- | -- | --
-`.devcontainer.json` | Used for development/testing with Visual Studio Code. | [Documentation](https://code.visualstudio.com/docs/remote/containers)
-`.github/ISSUE_TEMPLATE/*.yml` | Templates for the issue tracker | [Documentation](https://help.github.com/en/github/building-a-strong-community/configuring-issue-templates-for-your-repository)
-`custom_components/integration_blueprint/*` | Integration files, this is where everything happens. | [Documentation](https://developers.home-assistant.io/docs/creating_component_index)
-`CONTRIBUTING.md` | Guidelines on how to contribute. | [Documentation](https://help.github.com/en/github/building-a-strong-community/setting-guidelines-for-repository-contributors)
-`LICENSE` | The license file for the project. | [Documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/licensing-a-repository)
-`README.md` | The file you are reading now, should contain info about the integration, installation and configuration instructions. | [Documentation](https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax)
-`requirements.txt` | Python packages used for development/lint/testing this integration. | [Documentation](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
+For each configured region you get:
 
-## How?
+| Entity | Description |
+|---|---|
+| `sensor.pollen_dk_birk_REGION` | Birch pollen count (pollen/m³) |
+| `sensor.pollen_dk_bynke_REGION` | Mugwort pollen count |
+| `sensor.pollen_dk_el_REGION` | Alder pollen count |
+| `sensor.pollen_dk_elm_REGION` | Elm pollen count |
+| `sensor.pollen_dk_graes_REGION` | Grass pollen count |
+| `sensor.pollen_dk_hassel_REGION` | Hazel pollen count |
+| `sensor.pollen_dk_alternaria_REGION` | Alternaria mold spore count |
+| `sensor.pollen_dk_cladosporium_REGION` | Cladosporium mold spore count |
+| `sensor.pollen_dk_pollenvarsel_REGION` | Overall worst severity level |
 
-1. Create a new repository in GitHub, using this repository as a template by clicking the "Use this template" button in the GitHub UI.
-1. Open your new repository in Visual Studio Code devcontainer (Preferably with the "`Dev Containers: Clone Repository in Named Container Volume...`" option).
-1. Rename all instances of the `integration_blueprint` to `custom_components/<your_integration_domain>` (e.g. `custom_components/awesome_integration`).
-1. Rename all instances of the `Integration Blueprint` to `<Your Integration Name>` (e.g. `Awesome Integration`).
-1. Run the `scripts/develop` to start HA and test out your new integration.
+Each count sensor includes the following **attributes**:
+- `severity` — `ingen` / `lav` / `moderat` / `høj` / `meget høj`
+- `pollen_type_da` — Danish name
+- `pollen_type_en` — English name
+- `last_update` — Date of last measurement
+- `region` — Station name
 
-## Next steps
+The **overall severity sensor** includes:
+- `pollen_levels` — dict of all types with count + severity
+- `forecast` — next-day forecast text from Astma-Allergi Danmark
+- `last_update`
 
-These are some next steps you may want to look into:
-- Add tests to your integration, [`pytest-homeassistant-custom-component`](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) can help you get started.
-- Add brand images (logo/icon).
-- Create your first release.
-- Share your integration on the [Home Assistant Forum](https://community.home-assistant.io/).
-- Submit your integration to [HACS](https://hacs.xyz/docs/publish/start).
+---
+
+## Installation
+
+### Via HACS (recommended)
+
+1. In HACS → Integrations → ⋮ menu → **Custom repositories**
+2. Add `https://github.com/YOUR_USERNAME/pollen_dk` as type **Integration**
+3. Install **Pollen DK**
+4. Restart Home Assistant
+
+### Manual
+
+1. Copy the `custom_components/pollen_dk` folder to your HA `custom_components/` directory
+2. Restart Home Assistant
+
+---
+
+## Setup
+
+1. **Settings → Devices & Services → Add Integration**
+2. Search for **Pollen DK**
+3. Choose region: `København`, `Viborg`, or **Begge** (creates sensors for both)
+4. Done — sensors appear immediately
+
+---
+
+## Notes
+
+- **Outside pollen season** (roughly October–January) the API returns `0` or `null` for all types. Sensors will show `0` or be `unknown`.
+- Data is published once daily around **16:00 CET**. The integration polls hourly so you'll see the new values within an hour of publication.
+- Astma-Allergi Danmark is a non-profit organisation. Please consider supporting them at [astma-allergi.dk](https://www.astma-allergi.dk/).
+
+---
+
+## Attribution
+
+All pollen data is © **Astma-Allergi Danmark**. This integration is for personal, non-commercial use only, in accordance with Astma-Allergi Danmarks terms.

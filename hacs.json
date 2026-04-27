@@ -1,5 +1,6 @@
 {
-    "name": "Integration blueprint",
-    "homeassistant": "2026.3.2",
-    "hacs": "2.0.5"
+  "name": "Pollen DK",
+  "content_in_root": false,
+  "render_readme": true,
+  "filename": "pollen_dk.zip"
 }
