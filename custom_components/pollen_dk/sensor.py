@@ -140,6 +140,7 @@ class PollenCountSensor(PollenBaseSensor):
             "last_update": region_data.get("last_update", ""),
             "region": REGIONS[self._region_key],
             "attribution": ATTRIBUTION,
+            "forecast": pollen_data.get("forecast", {}),
         }
 
 
@@ -213,7 +214,7 @@ class PollenSeveritySensor(PollenBaseSensor):
 
         return {
             "pollen_levels": severities,
-            "forecast": region_data.get("forecast_text", ""),
+            "forecast": region_data.get("forecast", {}),
             "last_update": region_data.get("last_update", ""),
             "region": REGIONS[self._region_key],
             "attribution": ATTRIBUTION,

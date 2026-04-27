@@ -141,6 +141,43 @@ def test_firestore_value_nested() -> None:
     assert PollenDKApi._firestore_value(node) == {"child": {"leaf": "value"}}
 
 
+# ── _parse_predictions ───────────────────────────────────────────────────────
+
+
+def test_parse_predictions_explicit_values() -> None:
+    allergen = {
+        "predictions": {
+            "28-04-2026": {"prediction": "186", "isML": False},
+            "29-04-2026": {"prediction": "150", "isML": False},
+        },
+        "overrides": [],
+    }
+    result = PollenDKApi._parse_predictions(allergen)
+    assert result == {"28-04-2026": 186, "29-04-2026": 150}
+
+
+def test_parse_predictions_uses_override_when_prediction_empty() -> None:
+    allergen = {
+        "predictions": {
+            "28-04-2026": {"prediction": "2", "isML": False},
+            "29-04-2026": {"prediction": "", "isML": True},
+            "30-04-2026": {"prediction": "", "isML": True},
+        },
+        "overrides": ["2", "5", "10"],
+    }
+    result = PollenDKApi._parse_predictions(allergen)
+    assert result == {"28-04-2026": 2, "29-04-2026": 5, "30-04-2026": 10}
+
+
+def test_parse_predictions_empty_override_gives_none() -> None:
+    allergen = {
+        "predictions": {"28-04-2026": {"prediction": "", "isML": True}},
+        "overrides": [],
+    }
+    result = PollenDKApi._parse_predictions(allergen)
+    assert result == {"28-04-2026": None}
+
+
 # ── _parse_response ───────────────────────────────────────────────────────────
 
 

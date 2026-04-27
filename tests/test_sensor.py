@@ -56,6 +56,21 @@ async def test_out_of_season_count_sensor_is_zero(hass, setup_integration) -> No
     assert state.state == "0"
 
 
+async def test_count_sensor_forecast_attribute(hass, setup_integration) -> None:
+    entity_id = _entity_id(hass, f"{DOMAIN}_koebenhavn_birk_count")
+    attrs = hass.states.get(entity_id).attributes
+    assert "forecast" in attrs
+    assert attrs["forecast"] == {"27-04-2026": 186, "28-04-2026": 150}
+
+
+async def test_out_of_season_count_sensor_has_empty_forecast(
+    hass, setup_integration
+) -> None:
+    entity_id = _entity_id(hass, f"{DOMAIN}_koebenhavn_graes_count")
+    attrs = hass.states.get(entity_id).attributes
+    assert attrs["forecast"] == {}
+
+
 async def test_count_sensor_severity_attribute(hass, setup_integration) -> None:
     entity_id = _entity_id(hass, f"{DOMAIN}_koebenhavn_birk_count")
     state = hass.states.get(entity_id)
@@ -88,6 +103,13 @@ async def test_count_sensor_zero_when_no_region_data(hass, mock_config_entry) ->
 
 
 # ── Severity sensor state ─────────────────────────────────────────────────────
+
+
+async def test_severity_sensor_forecast_attribute(hass, setup_integration) -> None:
+    entity_id = _entity_id(hass, f"{DOMAIN}_koebenhavn_overall_severity")
+    attrs = hass.states.get(entity_id).attributes
+    assert "forecast" in attrs
+    assert attrs["forecast"] == {"27-04-2026": "high", "28-04-2026": "moderate"}
 
 
 async def test_severity_sensor_reports_worst_level(hass, setup_integration) -> None:

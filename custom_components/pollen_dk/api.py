@@ -200,6 +200,46 @@ class PollenDKApi:
                 return node[key]
         return {k: PollenDKApi._firestore_value(v) for k, v in node.items()}
 
+    @staticmethod
+    def _parse_predictions(allergen: dict[str, Any]) -> dict[str, int | None]:
+        # `overrides` (one entry per sorted prediction date) is a fallback
+        # count used when the ML `prediction` field is empty.
+        overrides: list[Any] = allergen.get("overrides") or []
+        result: dict[str, int | None] = {}
+        for i, date_key in enumerate(sorted(allergen.get("predictions") or {})):
+            pred_data = allergen["predictions"][date_key]
+            if isinstance(pred_data, dict):
+                pred_str = pred_data.get("prediction", "")
+            else:
+                pred_str = ""
+            if not pred_str and i < len(overrides):
+                pred_str = str(overrides[i]) if overrides[i] is not None else ""
+            try:
+                result[date_key] = int(pred_str) if pred_str else None
+            except (ValueError, TypeError):
+                result[date_key] = None
+        return result
+
+    @staticmethod
+    def _compute_region_forecast(
+        region_data: dict[str, Any],
+    ) -> dict[str, str]:
+        """Return worst severity per forecast date across all allergens."""
+        sev_order = ["none", "low", "moderate", "high", "very_high"]
+        region_forecast: dict[str, str] = {}
+        for pk in POLLEN_TYPES:
+            allergen_forecast = region_data.get(pk, {}).get("forecast", {})
+            for date_key, pred_count in allergen_forecast.items():
+                if pred_count is None:
+                    continue
+                sev = get_severity(pk, pred_count)
+                if sev not in sev_order:
+                    continue
+                current = region_forecast.get(date_key, "none")
+                if sev_order.index(sev) > sev_order.index(current):
+                    region_forecast[date_key] = sev
+        return region_forecast
+
     def _parse_response(self, data: Any) -> dict[str, Any]:
         """
         Parse the Firestore REST response into a structured dict.
@@ -231,25 +271,15 @@ class PollenDKApi:
             if not isinstance(station, dict):
                 continue
 
-            date_str = station.get("date", "")
-            allergens_raw = station.get("data") or {}
+            region_data: dict[str, Any] = {"last_update": station.get("date", "")}
 
-            region_data: dict[str, Any] = {
-                "last_update": date_str,
-                "forecast_text": "",
-            }
-
-            for allergen_id, allergen in allergens_raw.items():
+            for allergen_id, allergen in (station.get("data") or {}).items():
                 pollen_key = _ALLERGEN_ID_TO_KEY.get(str(allergen_id))
-                if pollen_key is None:
-                    continue
-                if not isinstance(allergen, dict):
+                if pollen_key is None or not isinstance(allergen, dict):
                     continue
 
                 raw_level = allergen.get("level")
                 in_season = allergen.get("inSeason", False)
-
-                # -1 means no measurement; also treat out-of-season as no data
                 if raw_level is None or int(raw_level) < 0 or not in_season:
                     count = None
                 else:
@@ -260,9 +290,9 @@ class PollenDKApi:
                     "severity": get_severity(pollen_key, count),
                     "name_da": pollen_key,
                     "name_en": POLLEN_TYPES[pollen_key],
+                    "forecast": self._parse_predictions(allergen),
                 }
 
-            # Fill any missing pollen types so sensors always have an entry
             for pollen_key, pollen_name_en in POLLEN_TYPES.items():
                 if pollen_key not in region_data:
                     region_data[pollen_key] = {
@@ -270,8 +300,10 @@ class PollenDKApi:
                         "severity": get_severity(pollen_key, None),
                         "name_da": pollen_key,
                         "name_en": pollen_name_en,
+                        "forecast": {},
                     }
 
+            region_data["forecast"] = self._compute_region_forecast(region_data)
             result[region_key] = region_data
 
         return result

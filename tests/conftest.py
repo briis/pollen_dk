@@ -12,14 +12,37 @@ from custom_components.pollen_dk.const import CONF_REGION, DOMAIN, REGION_KOEBEN
 # ── Firestore response helpers ────────────────────────────────────────────────
 
 
-def _allergen_node(level: int, *, in_season: bool) -> dict:
+def _allergen_node(
+    level: int,
+    *,
+    in_season: bool,
+    predictions: dict | None = None,
+    overrides: list | None = None,
+) -> dict:
+    pred_fields = {}
+    for date_key, pred_val in (predictions or {}).items():
+        pred_fields[date_key] = {
+            "mapValue": {
+                "fields": {
+                    "prediction": {
+                        "stringValue": str(pred_val) if pred_val is not None else ""
+                    },
+                    "isML": {"booleanValue": False},
+                }
+            }
+        }
+    override_values = (
+        [{"stringValue": str(v)} for v in overrides] if overrides else []
+    )
     return {
         "mapValue": {
             "fields": {
                 "level": {"integerValue": str(level)},
                 "inSeason": {"booleanValue": in_season},
-                "overrides": {"arrayValue": {}},
-                "predictions": {"mapValue": {"fields": {}}},
+                "overrides": {
+                    "arrayValue": {"values": override_values} if override_values else {}
+                },
+                "predictions": {"mapValue": {"fields": pred_fields}},
             }
         }
     }
@@ -37,7 +60,9 @@ def _station_node(date: str, allergens: dict) -> dict:
 
 
 _KBH_ALLERGENS = {
-    "7": _allergen_node(186, in_season=True),  # birk - in season
+    "7": _allergen_node(
+        186, in_season=True, predictions={"27-04-2026": 186, "28-04-2026": 150}
+    ),  # birk - in season
     "31": _allergen_node(-1, in_season=False),  # bynke
     "1": _allergen_node(-1, in_season=False),  # el
     "4": _allergen_node(-1, in_season=False),  # elm
@@ -69,54 +94,62 @@ MOCK_FIRESTORE_RESPONSE: dict = {
 MOCK_PARSED_DATA: dict = {
     "koebenhavn": {
         "last_update": "26-04-2026",
-        "forecast_text": "",
+        "forecast": {"27-04-2026": "high", "28-04-2026": "moderate"},
         "birk": {
             "count": 186,
             "severity": "high",
             "name_da": "birk",
             "name_en": "Birch",
+            "forecast": {"27-04-2026": 186, "28-04-2026": 150},
         },
         "bynke": {
             "count": None,
             "severity": "unknown",
             "name_da": "bynke",
             "name_en": "Mugwort",
+            "forecast": {},
         },
         "el": {
             "count": None,
             "severity": "unknown",
             "name_da": "el",
             "name_en": "Alder",
+            "forecast": {},
         },
         "elm": {
             "count": None,
             "severity": "unknown",
             "name_da": "elm",
             "name_en": "Elm",
+            "forecast": {},
         },
         "graes": {
             "count": None,
             "severity": "unknown",
             "name_da": "graes",
             "name_en": "Grass",
+            "forecast": {},
         },
         "hassel": {
             "count": None,
             "severity": "unknown",
             "name_da": "hassel",
             "name_en": "Hazel",
+            "forecast": {},
         },
         "alternaria": {
             "count": None,
             "severity": "unknown",
             "name_da": "alternaria",
             "name_en": "Alternaria",
+            "forecast": {},
         },
         "cladosporium": {
             "count": None,
             "severity": "unknown",
             "name_da": "cladosporium",
             "name_en": "Cladosporium",
+            "forecast": {},
         },
     },
 }

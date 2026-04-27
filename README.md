@@ -16,7 +16,7 @@ Home Assistant custom integration that fetches **live pollen data** for Denmark 
 - **8 pollen/spore types**: Birk, Bynke, El, Elm, Græs, Hassel, Alternaria, Cladosporium
 - **Raw count sensors** (pollen/m³) with severity attribute for each type
 - **Overall severity sensor** per region (worst level across all types)
-- **Forecast text** attribute with next-day outlook
+- **5-day forecast** — per-allergen daily counts and worst-severity summary per day
 - UI config flow — no YAML required
 - Updates every hour (data itself refreshes once daily ~16:00 CET)
 
@@ -44,10 +44,11 @@ Each count sensor includes the following **attributes**:
 - `pollen_type_en` — English name
 - `last_update` — Date of last measurement
 - `region` — Station name
+- `forecast` — dict of upcoming dates → predicted pollen count (e.g. `{"28-04-2026": 2, "29-04-2026": 5, ...}`). Out-of-season types have an empty dict.
 
 The **overall severity sensor** includes:
-- `pollen_levels` — dict of all types with count + severity
-- `forecast` — next-day forecast text from Astma-Allergi Danmark
+- `pollen_levels` — dict of all in-season types with count + severity
+- `forecast` — dict of upcoming dates → worst severity across all allergens (e.g. `{"28-04-2026": "low", "29-04-2026": "moderate", ...}`)
 - `last_update`
 
 ---
@@ -79,7 +80,7 @@ The **overall severity sensor** includes:
 
 ## Notes
 
-- **Outside pollen season** (roughly October–January) the API returns `0`. Sensor states will show `0`.
+- **Outside pollen season** sensors show `0` instead of unknown, and their `forecast` attribute is an empty dict.
 - Data is published once daily around **16:00 CET**. The integration polls hourly so you'll see the new values within an hour of publication.
 - Astma-Allergi Danmark is a non-profit organisation. Please consider supporting them at [astma-allergi.dk](https://www.astma-allergi.dk/).
 
