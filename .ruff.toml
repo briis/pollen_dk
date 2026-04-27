@@ -23,3 +23,15 @@ keep-runtime-typing = true
 
 [lint.mccabe]
 max-complexity = 25
+
+[lint.per-file-ignores]
+"tests/**" = [
+    "S101",    # assert is expected in tests
+    "ANN",     # type annotations not required in tests
+    "D",       # docstrings not required in tests
+    "PLR2004", # magic values in assertions are fine
+    "SLF001",  # private member access is valid in tests
+    "ARG001",  # fixtures used for side-effects may appear unused
+    "ARG002",  # same for methods
+    "PT004",   # autouse fixtures don't need to return a value
+]
