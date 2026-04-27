@@ -21,7 +21,7 @@
     "sensor": {
       "pollen_severity": {
         "state": {
-          "unknown": "Unknown",
+          "unknown": "Out of season",
           "none": "None",
           "low": "Low",
           "moderate": "Moderate",
