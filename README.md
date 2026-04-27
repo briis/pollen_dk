@@ -79,7 +79,7 @@ The **overall severity sensor** includes:
 
 ## Notes
 
-- **Outside pollen season** (roughly October–January) the API returns `0` or `null` for all types. Sensors will show `0` or be `unknown`.
+- **Outside pollen season** (roughly October–January) the API returns `0` or `null` for all types. Sensor states will show `0` or be `unknown`. Dashboard will show `Out of Season` and is translateable.
 - Data is published once daily around **16:00 CET**. The integration polls hourly so you'll see the new values within an hour of publication.
 - Astma-Allergi Danmark is a non-profit organisation. Please consider supporting them at [astma-allergi.dk](https://www.astma-allergi.dk/).
 
