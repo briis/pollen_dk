@@ -31,9 +31,7 @@ def _allergen_node(
                 }
             }
         }
-    override_values = (
-        [{"stringValue": str(v)} for v in overrides] if overrides else []
-    )
+    override_values = [{"stringValue": str(v)} for v in overrides] if overrides else []
     return {
         "mapValue": {
             "fields": {

@@ -216,7 +216,7 @@ class PollenDKApi:
                 pred_str = str(overrides[i]) if overrides[i] is not None else ""
             try:
                 result[date_key] = int(pred_str) if pred_str else None
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 result[date_key] = None
         return result
 
