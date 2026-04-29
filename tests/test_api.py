@@ -61,13 +61,16 @@ def _make_session(data: Any, status: int = 200) -> MagicMock:
         (None, "birk", "unknown"),
         (-1, "birk", "unknown"),
         (0, "birk", "none"),
-        (1, "birk", "low"),
+        (1, "birk", "none"),
+        (4, "birk", "none"),
         (5, "birk", "low"),
-        (6, "birk", "moderate"),
+        (6, "birk", "low"),
+        (49, "birk", "low"),
         (50, "birk", "moderate"),
-        (51, "birk", "high"),
+        (51, "birk", "moderate"),
+        (499, "birk", "moderate"),
         (500, "birk", "high"),
-        (501, "birk", "very_high"),
+        (501, "birk", "high"),
         (0, "bynke", "none"),
         (5, "bynke", "low"),
         (10, "bynke", "moderate"),
@@ -76,10 +79,11 @@ def _make_session(data: Any, status: int = 200) -> MagicMock:
         (100, "alternaria", "low"),
         (1000, "alternaria", "moderate"),
         (5000, "alternaria", "high"),
-        (50001, "cladosporium", "very_high"),
+        (50000, "cladosporium", "high"),
+        (50001, "cladosporium", "high"),
         # Unknown pollen type falls back to birk thresholds
         (0, "unknown_type", "none"),
-        (501, "unknown_type", "very_high"),
+        (501, "unknown_type", "high"),
     ],
 )
 def test_get_severity(count, pollen_type, expected) -> None:
@@ -144,38 +148,44 @@ def test_firestore_value_nested() -> None:
 # ── _parse_predictions ───────────────────────────────────────────────────────
 
 
-def test_parse_predictions_explicit_values() -> None:
+def test_parse_predictions_ml_grain_count_converted_to_severity() -> None:
     allergen = {
         "predictions": {
             "28-04-2026": {"prediction": "186", "isML": False},
-            "29-04-2026": {"prediction": "150", "isML": False},
+            "29-04-2026": {"prediction": "600", "isML": False},
         },
         "overrides": [],
     }
-    result = PollenDKApi._parse_predictions(allergen)
-    assert result == {"28-04-2026": 186, "29-04-2026": 150}
+    result = PollenDKApi._parse_predictions(allergen, "birk")
+    # 186 and 600 grains/m³: birk moderate=50-499, high>=500
+    assert result == {"2026-04-28": "moderate", "2026-04-29": "high"}
 
 
-def test_parse_predictions_uses_override_when_prediction_empty() -> None:
+def test_parse_predictions_override_index_used_when_prediction_empty() -> None:
     allergen = {
         "predictions": {
-            "28-04-2026": {"prediction": "2", "isML": False},
+            "28-04-2026": {"prediction": "", "isML": True},
             "29-04-2026": {"prediction": "", "isML": True},
             "30-04-2026": {"prediction": "", "isML": True},
         },
-        "overrides": ["2", "5", "10"],
+        "overrides": ["2", "0", "3"],
     }
-    result = PollenDKApi._parse_predictions(allergen)
-    assert result == {"28-04-2026": 2, "29-04-2026": 5, "30-04-2026": 10}
+    result = PollenDKApi._parse_predictions(allergen, "birk")
+    # Override values are severity indices: 2=moderate, 0=none, 3=high
+    assert result == {
+        "2026-04-28": "moderate",
+        "2026-04-29": "none",
+        "2026-04-30": "high",
+    }
 
 
-def test_parse_predictions_empty_override_gives_none() -> None:
+def test_parse_predictions_no_override_gives_none_string() -> None:
     allergen = {
         "predictions": {"28-04-2026": {"prediction": "", "isML": True}},
         "overrides": [],
     }
-    result = PollenDKApi._parse_predictions(allergen)
-    assert result == {"28-04-2026": None}
+    result = PollenDKApi._parse_predictions(allergen, "birk")
+    assert result == {"2026-04-28": "none"}
 
 
 # ── _parse_response ───────────────────────────────────────────────────────────
@@ -192,7 +202,9 @@ def test_parse_response_koebenhavn_birk() -> None:
     result = api._parse_response(MOCK_FIRESTORE_RESPONSE)
     birk = result["koebenhavn"]["birk"]
     assert birk["count"] == 186
-    assert birk["severity"] == "high"
+    assert (
+        birk["severity"] == "moderate"
+    )  # 186 grains/m³: birk moderate range is 50-499
     assert birk["name_en"] == "Birch"
 
 
@@ -201,7 +213,7 @@ def test_parse_response_viborg_birk() -> None:
     result = api._parse_response(MOCK_FIRESTORE_RESPONSE)
     birk = result["viborg"]["birk"]
     assert birk["count"] == 60
-    assert birk["severity"] == "high"
+    assert birk["severity"] == "moderate"  # 60 grains/m³: birk moderate range is 50-499
 
 
 def test_parse_response_out_of_season_is_none() -> None:
