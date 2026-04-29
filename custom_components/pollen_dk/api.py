@@ -4,11 +4,21 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+from datetime import UTC, datetime
 from typing import Any
 
 import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
+_DD_MM_YYYY = re.compile(r"^(\d\d)-(\d\d)-(\d{4})$")
+_OVERRIDE_SEVERITY_MAP: dict[int, str] = {
+    0: "none",
+    1: "low",
+    2: "moderate",
+    3: "high",
+    4: "very_high",
+}
 
 POLLEN_FEED_URL = "https://www.astma-allergi.dk/umbraco/Api/PollenApi/GetPollenFeed"
 
@@ -126,10 +136,10 @@ def get_severity(pollen_type: str, count: int | None) -> str:
     if count is None or count < 0:
         return "unknown"
     thresholds = SEVERITY_LEVELS.get(pollen_type, SEVERITY_LEVELS["birk"])
-    for threshold, label in thresholds:
-        if count <= threshold:
+    for threshold, label in reversed(thresholds):
+        if count >= threshold:
             return label
-    return "very_high"
+    return "none"
 
 
 class PollenDKApiError(Exception):
@@ -201,24 +211,57 @@ class PollenDKApi:
         return {k: PollenDKApi._firestore_value(v) for k, v in node.items()}
 
     @staticmethod
-    def _parse_predictions(allergen: dict[str, Any]) -> dict[str, int | None]:
-        # `overrides` (one entry per sorted prediction date) is a fallback
-        # count used when the ML `prediction` field is empty.
+    def _to_iso_date(date_key: str) -> str:
+        """Convert DD-MM-YYYY to ISO YYYY-MM-DD."""
+        m = _DD_MM_YYYY.match(date_key)
+        return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else date_key
+
+    @staticmethod
+    def _parse_predictions(allergen: dict[str, Any], pollen_key: str) -> dict[str, str]:
+        # When the ML `prediction` field is non-empty it holds a grain count →
+        # convert via get_severity.  When it is empty the `overrides` list
+        # provides a 0-4 severity index that maps directly via _OVERRIDE_SEVERITY_MAP.
         overrides: list[Any] = allergen.get("overrides") or []
-        result: dict[str, int | None] = {}
-        for i, date_key in enumerate(sorted(allergen.get("predictions") or {})):
-            pred_data = allergen["predictions"][date_key]
+        result: dict[str, str] = {}
+        raw_predictions = allergen.get("predictions") or {}
+        sorted_raw_keys = sorted(raw_predictions, key=PollenDKApi._to_iso_date)
+        for i, raw_key in enumerate(sorted_raw_keys):
+            pred_data = raw_predictions[raw_key]
+            iso_key = PollenDKApi._to_iso_date(raw_key)
             if isinstance(pred_data, dict):
-                pred_str = pred_data.get("prediction", "")
+                raw_val = pred_data.get("prediction")
+            elif pred_data is not None:
+                raw_val = pred_data
             else:
-                pred_str = ""
-            if not pred_str and i < len(overrides):
-                pred_str = str(overrides[i]) if overrides[i] is not None else ""
-            try:
-                result[date_key] = int(pred_str) if pred_str else None
-            except ValueError, TypeError:
-                result[date_key] = None
+                raw_val = None
+            pred_str = "" if raw_val is None or raw_val == "" else str(raw_val)
+            if pred_str:
+                try:
+                    result[iso_key] = get_severity(pollen_key, round(float(pred_str)))
+                    continue
+                except ValueError, TypeError:
+                    pass
+            if i < len(overrides) and overrides[i] is not None:
+                try:
+                    result[iso_key] = _OVERRIDE_SEVERITY_MAP.get(
+                        int(overrides[i]), "none"
+                    )
+                except ValueError, TypeError:
+                    result[iso_key] = "none"
+            else:
+                result[iso_key] = "none"
         return result
+
+    @staticmethod
+    def _worst_severity(region_data: dict[str, Any]) -> str:
+        """Return the highest severity across all in-season pollen types."""
+        sev_order = ["none", "low", "moderate", "high", "very_high"]
+        worst = "none"
+        for pk in POLLEN_TYPES:
+            sev = region_data.get(pk, {}).get("severity", "none")
+            if sev in sev_order and sev_order.index(sev) > sev_order.index(worst):
+                worst = sev
+        return worst
 
     @staticmethod
     def _compute_region_forecast(
@@ -229,14 +272,11 @@ class PollenDKApi:
         region_forecast: dict[str, str] = {}
         for pk in POLLEN_TYPES:
             allergen_forecast = region_data.get(pk, {}).get("forecast", {})
-            for date_key, pred_count in allergen_forecast.items():
-                if pred_count is None:
-                    continue
-                sev = get_severity(pk, pred_count)
+            for date_key, sev in allergen_forecast.items():
                 if sev not in sev_order:
                     continue
-                current = region_forecast.get(date_key, "none")
-                if sev_order.index(sev) > sev_order.index(current):
+                current = region_forecast.get(date_key, "")
+                if not current or sev_order.index(sev) > sev_order.index(current):
                     region_forecast[date_key] = sev
         return region_forecast
 
@@ -290,7 +330,7 @@ class PollenDKApi:
                     "severity": get_severity(pollen_key, count),
                     "name_da": pollen_key,
                     "name_en": POLLEN_TYPES[pollen_key],
-                    "forecast": self._parse_predictions(allergen),
+                    "forecast": self._parse_predictions(allergen, pollen_key),
                 }
 
             for pollen_key, pollen_name_en in POLLEN_TYPES.items():
@@ -303,7 +343,13 @@ class PollenDKApi:
                         "forecast": {},
                     }
 
-            region_data["forecast"] = self._compute_region_forecast(region_data)
+            today_iso = datetime.now(tz=UTC).date().isoformat()
+            region_data["forecast"] = {
+                k: v
+                for k, v in self._compute_region_forecast(region_data).items()
+                if k >= today_iso
+            }
+            region_data["forecast"][today_iso] = self._worst_severity(region_data)
             result[region_key] = region_data
 
         return result

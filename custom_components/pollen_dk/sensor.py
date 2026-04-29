@@ -11,7 +11,6 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
 
 from .const import (
     ATTRIBUTION,
@@ -178,11 +177,6 @@ class PollenSeveritySensor(PollenBaseSensor):
         region_data = self._region_data
         if region_data is None:
             return None
-
-        today = dt_util.now().date().isoformat()
-        today_forecast = region_data.get("forecast", {}).get(today)
-        if today_forecast is not None:
-            return today_forecast
 
         worst_idx = 0
         for pollen_key in POLLEN_TYPES:
