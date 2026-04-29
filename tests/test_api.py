@@ -188,6 +188,31 @@ def test_parse_predictions_no_override_gives_none_string() -> None:
     assert result == {"2026-04-28": "none"}
 
 
+def test_parse_predictions_small_value_treated_as_severity_index() -> None:
+    """Values 0-4 in the prediction field are severity indices, not grain counts.
+    The real API sends e.g. '2' (= moderate) for human-set forecast days."""
+    allergen = {
+        "predictions": {
+            "29-04-2026": {"prediction": "75", "isML": False},  # grain count
+            "30-04-2026": {
+                "prediction": "2",
+                "isML": False,
+            },  # severity index 2 = moderate
+            "01-05-2026": {"prediction": "", "isML": True},  # empty - use override
+        },
+        "overrides": ["2", "2", "2"],
+    }
+    result = PollenDKApi._parse_predictions(allergen, "birk")
+    # 75 grains: grain count path → moderate
+    # '2': severity index path → moderate (get_severity("birk", 2) would give "none")
+    # '': override[2]=2 → moderate
+    assert result == {
+        "2026-04-29": "moderate",
+        "2026-04-30": "moderate",
+        "2026-05-01": "moderate",
+    }
+
+
 # ── _parse_response ───────────────────────────────────────────────────────────
 
 

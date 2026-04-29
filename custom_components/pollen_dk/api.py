@@ -19,6 +19,7 @@ _OVERRIDE_SEVERITY_MAP: dict[int, str] = {
     3: "high",
     4: "very_high",
 }
+_MAX_SEVERITY_INDEX = max(_OVERRIDE_SEVERITY_MAP)
 
 POLLEN_FEED_URL = "https://www.astma-allergi.dk/umbraco/Api/PollenApi/GetPollenFeed"
 
@@ -237,7 +238,12 @@ class PollenDKApi:
             pred_str = "" if raw_val is None or raw_val == "" else str(raw_val)
             if pred_str:
                 try:
-                    result[iso_key] = get_severity(pollen_key, round(float(pred_str)))
+                    pred_num = round(float(pred_str))
+                    if pred_num <= _MAX_SEVERITY_INDEX:
+                        # Values 0-4 are severity indices (same scale as overrides)
+                        result[iso_key] = _OVERRIDE_SEVERITY_MAP.get(pred_num, "none")
+                    else:
+                        result[iso_key] = get_severity(pollen_key, pred_num)
                     continue
                 except ValueError, TypeError:
                     pass
