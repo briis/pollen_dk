@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from homeassistant.util import dt as dt_util
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
@@ -179,7 +179,7 @@ class PollenSeveritySensor(PollenBaseSensor):
         if region_data is None:
             return None
 
-        today = date.today().isoformat()
+        today = dt_util.now().date().isoformat()
         today_forecast = region_data.get("forecast", {}).get(today)
         if today_forecast is not None:
             return today_forecast
