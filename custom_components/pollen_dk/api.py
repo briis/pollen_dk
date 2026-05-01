@@ -137,10 +137,10 @@ def get_severity(pollen_type: str, count: int | None) -> str:
     if count is None or count < 0:
         return "unknown"
     thresholds = SEVERITY_LEVELS.get(pollen_type, SEVERITY_LEVELS["birk"])
-    for threshold, label in reversed(thresholds):
-        if count >= threshold:
+    for threshold, label in thresholds:
+        if count <= threshold:
             return label
-    return "none"
+    return "very_high"
 
 
 class PollenDKApiError(Exception):
