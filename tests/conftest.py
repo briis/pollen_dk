@@ -92,13 +92,13 @@ MOCK_FIRESTORE_RESPONSE: dict = {
 MOCK_PARSED_DATA: dict = {
     "koebenhavn": {
         "last_update": "26-04-2026",
-        "forecast": {"2026-04-27": "moderate", "2026-04-28": "moderate"},
+        "forecast": {"2026-04-27": "high", "2026-04-28": "high"},
         "birk": {
             "count": 186,
-            "severity": "moderate",  # 186 grains/m³ is in the moderate range (50-499)
+            "severity": "high",  # 186 grains/m³ is in the high range (101-500)
             "name_da": "birk",
             "name_en": "Birch",
-            "forecast": {"2026-04-27": "moderate", "2026-04-28": "moderate"},
+            "forecast": {"2026-04-27": "high", "2026-04-28": "high"},
         },
         "bynke": {
             "count": None,

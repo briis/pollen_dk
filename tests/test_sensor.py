@@ -60,7 +60,7 @@ async def test_count_sensor_forecast_attribute(hass, setup_integration) -> None:
     entity_id = _entity_id(hass, f"{DOMAIN}_koebenhavn_birk_count")
     attrs = hass.states.get(entity_id).attributes
     assert "forecast" in attrs
-    assert attrs["forecast"] == {"2026-04-27": "moderate", "2026-04-28": "moderate"}
+    assert attrs["forecast"] == {"2026-04-27": "high", "2026-04-28": "high"}
 
 
 async def test_out_of_season_count_sensor_has_empty_forecast(
@@ -74,7 +74,7 @@ async def test_out_of_season_count_sensor_has_empty_forecast(
 async def test_count_sensor_severity_attribute(hass, setup_integration) -> None:
     entity_id = _entity_id(hass, f"{DOMAIN}_koebenhavn_birk_count")
     state = hass.states.get(entity_id)
-    assert state.attributes["severity"] == "moderate"
+    assert state.attributes["severity"] == "high"
 
 
 async def test_count_sensor_metadata_attributes(hass, setup_integration) -> None:
@@ -109,15 +109,15 @@ async def test_severity_sensor_forecast_attribute(hass, setup_integration) -> No
     entity_id = _entity_id(hass, f"{DOMAIN}_koebenhavn_overall_severity")
     attrs = hass.states.get(entity_id).attributes
     assert "forecast" in attrs
-    assert attrs["forecast"] == {"2026-04-27": "moderate", "2026-04-28": "moderate"}
+    assert attrs["forecast"] == {"2026-04-27": "high", "2026-04-28": "high"}
 
 
 async def test_severity_sensor_reports_worst_level(hass, setup_integration) -> None:
     entity_id = _entity_id(hass, f"{DOMAIN}_koebenhavn_overall_severity")
     state = hass.states.get(entity_id)
     assert state is not None
-    # birk is "moderate", everything else is "unknown" → worst known = "moderate"
-    assert state.state == "moderate"
+    # birk is "high", everything else is "unknown" → worst known = "high"
+    assert state.state == "high"
 
 
 async def test_severity_sensor_all_unknown(hass, mock_config_entry) -> None:

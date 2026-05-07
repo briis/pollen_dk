@@ -61,29 +61,42 @@ def _make_session(data: Any, status: int = 200) -> MagicMock:
         (None, "birk", "unknown"),
         (-1, "birk", "unknown"),
         (0, "birk", "none"),
-        (1, "birk", "none"),
-        (4, "birk", "none"),
+        (1, "birk", "low"),
+        (4, "birk", "low"),
         (5, "birk", "low"),
         (6, "birk", "low"),
-        (49, "birk", "low"),
+        (30, "birk", "low"),
+        (31, "birk", "moderate"),
+        (49, "birk", "moderate"),
         (50, "birk", "moderate"),
         (51, "birk", "moderate"),
-        (499, "birk", "moderate"),
+        (100, "birk", "moderate"),
+        (101, "birk", "high"),
+        (499, "birk", "high"),
         (500, "birk", "high"),
-        (501, "birk", "high"),
+        (501, "birk", "very_high"),
         (0, "bynke", "none"),
         (5, "bynke", "low"),
-        (10, "bynke", "moderate"),
-        (30, "bynke", "high"),
+        (10, "bynke", "low"),
+        (11, "bynke", "moderate"),
+        (30, "bynke", "moderate"),
+        (50, "bynke", "moderate"),
+        (51, "bynke", "high"),
         (0, "alternaria", "none"),
-        (100, "alternaria", "low"),
-        (1000, "alternaria", "moderate"),
-        (5000, "alternaria", "high"),
-        (50000, "cladosporium", "high"),
-        (50001, "cladosporium", "high"),
+        (20, "alternaria", "low"),
+        (100, "alternaria", "moderate"),
+        (500, "alternaria", "high"),
+        (1000, "alternaria", "very_high"),
+        (5000, "alternaria", "very_high"),
+        (0, "cladosporium", "none"),
+        (2000, "cladosporium", "low"),
+        (6000, "cladosporium", "moderate"),
+        (10000, "cladosporium", "high"),
+        (50000, "cladosporium", "very_high"),
+        (50001, "cladosporium", "very_high"),
         # Unknown pollen type falls back to birk thresholds
         (0, "unknown_type", "none"),
-        (501, "unknown_type", "high"),
+        (501, "unknown_type", "very_high"),
     ],
 )
 def test_get_severity(count, pollen_type, expected) -> None:
@@ -157,8 +170,8 @@ def test_parse_predictions_ml_grain_count_converted_to_severity() -> None:
         "overrides": [],
     }
     result = PollenDKApi._parse_predictions(allergen, "birk")
-    # 186 and 600 grains/m³: birk moderate=50-499, high>=500
-    assert result == {"2026-04-28": "moderate", "2026-04-29": "high"}
+    # 186 grains/m³: birk high=101-500; 600 grains/m³: birk very_high>500
+    assert result == {"2026-04-28": "high", "2026-04-29": "very_high"}
 
 
 def test_parse_predictions_override_index_used_when_prediction_empty() -> None:
@@ -227,9 +240,7 @@ def test_parse_response_koebenhavn_birk() -> None:
     result = api._parse_response(MOCK_FIRESTORE_RESPONSE)
     birk = result["koebenhavn"]["birk"]
     assert birk["count"] == 186
-    assert (
-        birk["severity"] == "moderate"
-    )  # 186 grains/m³: birk moderate range is 50-499
+    assert birk["severity"] == "high"  # 186 grains/m³: birk high range is 101-500
     assert birk["name_en"] == "Birch"
 
 
@@ -238,7 +249,7 @@ def test_parse_response_viborg_birk() -> None:
     result = api._parse_response(MOCK_FIRESTORE_RESPONSE)
     birk = result["viborg"]["birk"]
     assert birk["count"] == 60
-    assert birk["severity"] == "moderate"  # 60 grains/m³: birk moderate range is 50-499
+    assert birk["severity"] == "moderate"  # 60 grains/m³: birk moderate range is 31-100
 
 
 def test_parse_response_out_of_season_is_none() -> None:
