@@ -76,7 +76,7 @@ SEVERITY_LEVELS = {
         (0, "none"),
         (30, "low"),
         (100, "moderate"),
-        (500, "high"),
+        (200, "high"),
         (float("inf"), "very_high"),
     ],
     "graes": [
