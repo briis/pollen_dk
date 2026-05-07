@@ -1,12 +1,33 @@
-# https://www.home-assistant.io/integrations/default_config/
-default_config:
-
-# https://www.home-assistant.io/integrations/homeassistant/
 homeassistant:
   debug: true
 
-# https://www.home-assistant.io/integrations/logger/
+frontend:
+config:
+history:
+logbook:
+sun:
+automation:
+script:
+scene:
+input_boolean:
+input_number:
+input_select:
+input_text:
+input_button:
+input_datetime:
+timer:
+counter:
+person:
+zone:
+tag:
+webhook:
+my:
+media_source:
+schedule:
+energy:
+mobile_app:
+
 logger:
   default: info
   logs:
-    custom_components.integration_blueprint: debug
+    custom_components.pollen_dk: debug
