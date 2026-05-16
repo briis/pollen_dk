@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import homeassistant.helpers.config_validation as cv
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -21,6 +22,8 @@ from .coordinator import PollenDKCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["sensor"]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 _CARD_URL = f"/{DOMAIN}/www/pollen-dk-card.js"
 
@@ -45,7 +48,11 @@ async def _register_card(hass: HomeAssistant) -> None:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(f"/{DOMAIN}/www", www_path, cache_headers=False)]
     )
-    add_extra_js_url(hass, _CARD_URL)
+    try:
+        add_extra_js_url(hass, _CARD_URL)
+    except KeyError:
+        # frontend not initialised (e.g. in tests) — skip JS URL registration
+        return
     _LOGGER.debug("Registered Pollen DK card at %s", _CARD_URL)
 
 
