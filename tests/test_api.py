@@ -72,8 +72,8 @@ def _make_session(data: Any, status: int = 200) -> MagicMock:
         (51, "birk", "moderate"),
         (100, "birk", "moderate"),
         (101, "birk", "high"),
-        (499, "birk", "high"),
-        (500, "birk", "high"),
+        (499, "birk", "very_high"),
+        (500, "birk", "very_high"),
         (501, "birk", "very_high"),
         (0, "bynke", "none"),
         (5, "bynke", "low"),
@@ -170,7 +170,7 @@ def test_parse_predictions_ml_grain_count_converted_to_severity() -> None:
         "overrides": [],
     }
     result = PollenDKApi._parse_predictions(allergen, "birk")
-    # 186 grains/m³: birk high=101-500; 600 grains/m³: birk very_high>500
+    # 186 grains/m³: birk high=101-200; 600 grains/m³: birk very_high>200
     assert result == {"2026-04-28": "high", "2026-04-29": "very_high"}
 
 
@@ -240,7 +240,7 @@ def test_parse_response_koebenhavn_birk() -> None:
     result = api._parse_response(MOCK_FIRESTORE_RESPONSE)
     birk = result["koebenhavn"]["birk"]
     assert birk["count"] == 186
-    assert birk["severity"] == "high"  # 186 grains/m³: birk high range is 101-500
+    assert birk["severity"] == "high"  # 186 grains/m³: birk high range is 101-200
     assert birk["name_en"] == "Birch"
 
 
