@@ -29,6 +29,20 @@ const SEVERITY_COLORS = {
   unknown: "#BDBDBD",
 };
 
+// Upper bounds (inclusive) for low / moderate / high per pollen type
+const POLLEN_THRESHOLDS = {
+  birk:         [30, 100, 200],
+  bynke:        [10, 50,  100],
+  el:           [10, 50,  100],
+  elm:          [10, 50,  100],
+  graes:        [10, 50,  100],
+  hassel:       [5,  15,   30],
+  alternaria:   [20, 100, 500],
+  cladosporium: [2000, 6000, 10000],
+};
+
+const GAUGE_PCT = { none: 0, low: 0.2, moderate: 0.5, high: 0.75, very_high: 1.0, unknown: 0 };
+
 const TRANSLATIONS = {
   da: {
     default_title: "Pollenprognose",
@@ -44,6 +58,26 @@ const TRANSLATIONS = {
     },
     no_data: (region) =>
       `Ingen pollendata fundet for ${region}.<br>Kontroller at integrationen er sat op.`,
+    popup: {
+      low: "Lavt",
+      moderate: "Moderat",
+      high: "Højt",
+      under: "Under",
+      between: "Mellem",
+      over: "Over",
+      pollen: "pollen",
+      measured: (date, region) => `Målt d. ${date} — ${region}`,
+    },
+    descriptions: {
+      birk: "Mængden af birkepollen i luften topper typisk i slut april.",
+      bynke: "Bynkepollen er i sæson fra juli til september.",
+      el: "Elpollen spredes tidligt på foråret, typisk i marts–april.",
+      elm: "Elmpollen spredes om foråret, typisk i april–maj.",
+      graes: "Græspollen er i sæson fra maj til august.",
+      hassel: "Hasselpollen spredes tidligt, typisk fra januar til marts.",
+      alternaria: "Alternaria er en skimmelsvamp med sporer i luften fra juli til oktober.",
+      cladosporium: "Cladosporium er den mest udbredte skimmelsvamp og findes i luften fra april til november.",
+    },
     editor: {
       title: "Titel",
       region: "Region",
@@ -79,6 +113,26 @@ const TRANSLATIONS = {
     },
     no_data: (region) =>
       `No pollen data found for ${region}.<br>Check that the integration is configured correctly.`,
+    popup: {
+      low: "Low",
+      moderate: "Moderate",
+      high: "High",
+      under: "Under",
+      between: "Between",
+      over: "Over",
+      pollen: "pollen",
+      measured: (date, region) => `Measured on ${date} — ${region}`,
+    },
+    descriptions: {
+      birk: "Birch pollen levels typically peak in late April.",
+      bynke: "Mugwort pollen is in season from July to September.",
+      el: "Alder pollen spreads early in spring, typically March–April.",
+      elm: "Elm pollen spreads in spring, typically April–May.",
+      graes: "Grass pollen is in season from May to August.",
+      hassel: "Hazel pollen spreads early, typically from January to March.",
+      alternaria: "Alternaria is a mold with spores in the air from July to October.",
+      cladosporium: "Cladosporium is the most widespread mold and is found in the air from April to November.",
+    },
     editor: {
       title: "Title",
       region: "Region",
@@ -266,6 +320,131 @@ class PollenDkCard extends HTMLElement {
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
+    this._closePopup();
+  }
+
+  _buildGauge(severity) {
+    const pct = GAUGE_PCT[severity] ?? 0;
+    const color = SEVERITY_COLORS[severity] || SEVERITY_COLORS.unknown;
+    const r = 80, cx = 100, cy = 100;
+    const bg = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`;
+    let fill = "";
+    if (pct > 0) {
+      const a = Math.PI * (1 - pct);
+      const ex = (cx + r * Math.cos(a)).toFixed(2);
+      const ey = (cy - r * Math.sin(a)).toFixed(2);
+      fill = `<path d="M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${ex} ${ey}"
+        fill="none" stroke="${color}" stroke-width="14" stroke-linecap="round"/>`;
+    }
+    return `<svg viewBox="0 0 200 108" xmlns="http://www.w3.org/2000/svg">
+      <path d="${bg}" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="14" stroke-linecap="round"/>
+      ${fill}
+    </svg>`;
+  }
+
+  _formatDate(lastUpdate) {
+    if (!lastUpdate || !/^\d{2}-\d{2}-\d{4}$/.test(lastUpdate)) return lastUpdate;
+    const [d, m, y] = lastUpdate.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(
+      this._hass?.language === "da" ? "da-DK" : "en-US",
+      { day: "numeric", month: "long" }
+    );
+  }
+
+  _showPopup(sensor) {
+    if (!sensor) return;
+    this._closePopup();
+
+    const t = this._t();
+    const nameDa = sensor.attributes.pollen_type_da;
+    const pollenKey = POLLEN_TYPE_KEYS[nameDa];
+    const name = t === TRANSLATIONS.da ? nameDa : (sensor.attributes.pollen_type_en || nameDa);
+    const icon = POLLEN_MDI_ICONS[nameDa] || "mdi:flower-pollen";
+    const severity = sensor.attributes.severity || "unknown";
+    const count = sensor.state;
+    const region = sensor.attributes.region || "";
+    const date = this._formatDate(sensor.attributes.last_update || "");
+
+    const severityLabel = t.severity[severity] || severity;
+    const description = t.descriptions?.[pollenKey] || "";
+    const [tLow, tMod] = POLLEN_THRESHOLDS[pollenKey] || [10, 50];
+    const p = t.popup;
+
+    const thresholdsHtml = `
+      <div class="pd-trow"><b>${p.low}:</b> ${p.under} ${tLow} ${p.pollen}</div>
+      <div class="pd-trow"><b>${p.moderate}:</b> ${p.between} ${tLow}–${tMod} ${p.pollen}</div>
+      <div class="pd-trow"><b>${p.high}:</b> ${p.over} ${tMod} ${p.pollen}</div>`;
+
+    const el = document.createElement("div");
+    el.style.cssText =
+      "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;" +
+      "justify-content:center;background:rgba(0,0,0,0.45);padding:12px;box-sizing:border-box";
+
+    el.innerHTML = `
+      <style>
+        .pd-card {
+          background: var(--card-background-color, #fff);
+          color: var(--primary-text-color, #212121);
+          border-radius: 24px;
+          width: 100%; max-width: 480px;
+          padding: 24px 24px 28px;
+          box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+          max-height: 92vh; overflow-y: auto; box-sizing: border-box;
+          position: relative;
+        }
+        .pd-head { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+        .pd-head ha-icon { --mdc-icon-size:26px; color:var(--secondary-text-color,#757575); }
+        .pd-head-name { font-size:1.05rem; font-weight:600; }
+        .pd-close {
+          position:absolute; top:18px; right:18px;
+          width:30px; height:30px; border-radius:50%;
+          border:none; cursor:pointer; font-size:16px;
+          display:flex; align-items:center; justify-content:center;
+          background:rgba(var(--rgb-primary-text-color,0,0,0),0.08);
+          color:var(--secondary-text-color,#757575);
+        }
+        .pd-gauge { display:flex; flex-direction:column; align-items:center; }
+        .pd-gauge svg { width:180px; }
+        .pd-count { font-size:2.4rem; font-weight:700; margin-top:-16px; line-height:1; }
+        .pd-sev { color:var(--secondary-text-color,#757575); font-size:0.95rem; margin:4px 0 18px; }
+        .pd-desc { font-size:0.88rem; color:var(--secondary-text-color,#757575); line-height:1.55; margin-bottom:14px; }
+        .pd-trow { font-size:0.9rem; margin-bottom:5px; }
+        .pd-divider { border:none; border-top:1px solid var(--divider-color,rgba(0,0,0,0.12)); margin:14px 0; }
+        .pd-footer { font-size:0.8rem; color:var(--disabled-text-color,#9e9e9e); }
+      </style>
+      <div class="pd-card">
+        <div class="pd-head">
+          <ha-icon icon="${icon}"></ha-icon>
+          <span class="pd-head-name">${name}</span>
+        </div>
+        <button class="pd-close">✕</button>
+        <div class="pd-gauge">
+          ${this._buildGauge(severity)}
+          <div class="pd-count">${count}</div>
+        </div>
+        <div class="pd-sev">${severityLabel}</div>
+        ${description ? `<div class="pd-desc">${description}</div>` : ""}
+        <div>${thresholdsHtml}</div>
+        <hr class="pd-divider">
+        <div class="pd-footer">${p.measured(date, region)}</div>
+      </div>`;
+
+    el.addEventListener("click", (e) => { if (e.target === el) this._closePopup(); });
+    el.querySelector(".pd-close").addEventListener("click", () => this._closePopup());
+    this._escHandler = (e) => { if (e.key === "Escape") this._closePopup(); };
+    document.addEventListener("keydown", this._escHandler);
+
+    document.body.appendChild(el);
+    this._popupEl = el;
+  }
+
+  _closePopup() {
+    this._popupEl?.remove();
+    this._popupEl = null;
+    if (this._escHandler) {
+      document.removeEventListener("keydown", this._escHandler);
+      this._escHandler = null;
+    }
   }
 
   _updateVisibleDays() {
@@ -372,6 +551,10 @@ class PollenDkCard extends HTMLElement {
         border-radius: 12px;
         padding: 10px 14px;
         min-height: 48px;
+        cursor: pointer;
+      }
+      .pollen-row:hover {
+        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.08);
       }
       .pollen-label {
         flex: 1;
@@ -441,7 +624,7 @@ class PollenDkCard extends HTMLElement {
           const icon = POLLEN_MDI_ICONS[nameDa] || "mdi:flower-pollen";
           const forecast = s.attributes.forecast || {};
           const dots = [
-            this._dot(s.attributes.severity || "unknown", "I dag"),
+            this._dot(s.attributes.severity || "unknown", t.today),
             ...forecastDates.map((d) =>
               this._dot(forecast[d] || "unknown", this._getDayLabel(d))
             ),
@@ -451,7 +634,7 @@ class PollenDkCard extends HTMLElement {
             .join("");
 
           return `
-            <div class="pollen-row">
+            <div class="pollen-row" data-entity-id="${s.entity_id}">
               <div class="pollen-label">
                 <ha-icon icon="${icon}"></ha-icon>
                 <span class="pollen-name">${name}</span>
@@ -472,6 +655,11 @@ class PollenDkCard extends HTMLElement {
         </div>
         <div class="rows">${rowsHtml}</div>
       </ha-card>`;
+
+    this.shadowRoot.querySelector(".rows")?.addEventListener("click", (e) => {
+      const row = e.target.closest("[data-entity-id]");
+      if (row) this._showPopup(this._hass.states[row.dataset.entityId]);
+    });
   }
 }
 
