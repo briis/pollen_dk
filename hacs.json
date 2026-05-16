@@ -2,6 +2,5 @@
   "name": "Pollen DK",
   "content_in_root": false,
   "render_readme": true,
-  "filename": "pollen_dk.zip",
-  "icon": "https://raw.githubusercontent.com/briis/pollen_dk/main/custom_components/pollen_dk/brand/icon.png"
+  "filename": "pollen_dk.zip"
 }
