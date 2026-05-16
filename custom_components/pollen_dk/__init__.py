@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
+from homeassistant.components.frontend import add_extra_js_url
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 if TYPE_CHECKING:
@@ -18,6 +21,32 @@ from .coordinator import PollenDKCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["sensor"]
+
+_CARD_URL = f"/{DOMAIN}/www/pollen-dk-card.js"
+
+
+async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
+    """Register Lovelace card resources once when the integration loads."""
+    await _register_card(hass)
+    return True
+
+
+async def _register_card(hass: HomeAssistant) -> None:
+    """Register the custom card JS file with the HA frontend (idempotent)."""
+    flag = f"{DOMAIN}_card_registered"
+    if hass.data.get(flag):
+        return
+    hass.data[flag] = True
+
+    if hass.http is None:
+        return
+
+    www_path = Path(__file__).parent / "www"
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(f"/{DOMAIN}/www", www_path, cache_headers=False)]
+    )
+    add_extra_js_url(hass, _CARD_URL)
+    _LOGGER.debug("Registered Pollen DK card at %s", _CARD_URL)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

@@ -27,6 +27,11 @@ schedule:
 energy:
 mobile_app:
 
+lovelace:
+  resources:
+    - url: /local/pollen-dk-card.js
+      type: module
+
 logger:
   default: info
   logs:
