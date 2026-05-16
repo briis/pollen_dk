@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import homeassistant.helpers.config_validation as cv
-from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.lovelace.const import DOMAIN as LOVELACE_DOMAIN
+from homeassistant.components.lovelace.resources import ResourceStorageCollection
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 if TYPE_CHECKING:
@@ -26,6 +27,7 @@ PLATFORMS = ["sensor"]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 _CARD_URL = f"/{DOMAIN}/www/pollen-dk-card.js"
+_STATIC_PATH_FLAG = f"{DOMAIN}_static_registered"
 
 
 async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
@@ -35,25 +37,34 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
 
 
 async def _register_card(hass: HomeAssistant) -> None:
-    """Register the custom card JS file with the HA frontend (idempotent)."""
-    flag = f"{DOMAIN}_card_registered"
-    if hass.data.get(flag):
-        return
-    hass.data[flag] = True
+    """Register the custom card JS as a persistent Lovelace resource (idempotent)."""
+    # Register the static HTTP path (in-memory, once per runtime)
+    if hass.http is not None and not hass.data.get(_STATIC_PATH_FLAG):
+        hass.data[_STATIC_PATH_FLAG] = True
+        www_path = str(Path(__file__).parent / "www")
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(f"/{DOMAIN}/www", www_path, cache_headers=False)]
+        )
 
-    if hass.http is None:
+    # Register as a persistent Lovelace resource so it survives HA restarts
+    lovelace = hass.data.get(LOVELACE_DOMAIN)
+    if lovelace is None:
         return
 
-    www_path = Path(__file__).parent / "www"
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(f"/{DOMAIN}/www", www_path, cache_headers=False)]
-    )
-    try:
-        add_extra_js_url(hass, _CARD_URL)
-    except KeyError:
-        # frontend not initialised (e.g. in tests) — skip JS URL registration
+    resources = lovelace.resources
+    if not isinstance(resources, ResourceStorageCollection):
         return
-    _LOGGER.debug("Registered Pollen DK card at %s", _CARD_URL)
+
+    # Ensure storage is loaded before inspecting items
+    await resources._async_ensure_loaded()  # noqa: SLF001
+
+    for item in resources.async_items():
+        if item.get("url") == _CARD_URL:
+            _LOGGER.debug("Pollen DK card already registered as Lovelace resource")
+            return
+
+    await resources.async_create_item({"res_type": "module", "url": _CARD_URL})
+    _LOGGER.debug("Registered Pollen DK card at %s as Lovelace resource", _CARD_URL)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

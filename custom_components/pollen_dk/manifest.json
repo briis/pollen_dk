@@ -6,11 +6,12 @@
   ],
   "config_flow": true,
   "dependencies": [
-    "http"
+    "http",
+    "lovelace"
   ],
-  "documentation": "https://github.com/your_username/pollen_dk",
+  "documentation": "https://github.com/briis/pollen_dk",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/your_username/pollen_dk/issues",
+  "issue_tracker": "https://github.com/briis/pollen_dk/issues",
   "requirements": [],
   "version": "1.1.0"
 }
