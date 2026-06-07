@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip show *)",
+      "Bash(pip index *)",
+      "Bash(pip install *)",
+      "Bash(bash scripts/test)",
+      "Bash(bash /workspaces/pollen_dk/scripts/test)"
+    ]
+  }
+}
