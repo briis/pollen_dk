@@ -24,20 +24,20 @@ const SEVERITY_COLORS = {
   none: "#E0E0E0",
   low: "#8BC34A",
   moderate: "#FFD600",
-  high: "#FF9800",
-  very_high: "#F44336",
+  high: "#F44336",
+  very_high: "#9C27B0",
   unknown: "#BDBDBD",
 };
 
 // Upper bounds (inclusive) for low / moderate / high per pollen type
 const POLLEN_THRESHOLDS = {
-  birk:         [30, 100, 200],
-  bynke:        [10, 50,  100],
-  el:           [10, 50,  100],
-  elm:          [10, 50,  100],
-  graes:        [10, 50,  100],
-  hassel:       [5,  15,   30],
-  alternaria:   [20, 100, 500],
+  birk: [30, 100, 200],
+  bynke: [10, 50, 100],
+  el: [10, 50, 100],
+  elm: [10, 50, 100],
+  graes: [10, 50, 100],
+  hassel: [5, 15, 30],
+  alternaria: [20, 100, 500],
   cladosporium: [2000, 6000, 10000],
 };
 
