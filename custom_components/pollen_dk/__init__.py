@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -26,7 +27,16 @@ PLATFORMS = ["sensor"]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-_CARD_URL = f"/{DOMAIN}/www/pollen-dk-card.js"
+def _manifest_version() -> str:
+    try:
+        manifest = json.loads((Path(__file__).parent / "manifest.json").read_text())
+        return manifest.get("version", "0")
+    except Exception:  # noqa: BLE001
+        return "0"
+
+
+_CARD_BASE_URL = f"/{DOMAIN}/www/pollen-dk-card.js"
+_CARD_URL = f"{_CARD_BASE_URL}?v{_manifest_version()}"
 _STATIC_PATH_FLAG = f"{DOMAIN}_static_registered"
 
 
@@ -59,8 +69,13 @@ async def _register_card(hass: HomeAssistant) -> None:
     await resources._async_ensure_loaded()  # noqa: SLF001
 
     for item in resources.async_items():
-        if item.get("url") == _CARD_URL:
+        url = item.get("url", "")
+        if url == _CARD_URL:
             _LOGGER.debug("Pollen DK card already registered as Lovelace resource")
+            return
+        if url.startswith(_CARD_BASE_URL):
+            await resources.async_update_item(item["id"], {"res_type": "module", "url": _CARD_URL})
+            _LOGGER.debug("Updated Pollen DK card resource to %s", _CARD_URL)
             return
 
     await resources.async_create_item({"res_type": "module", "url": _CARD_URL})
