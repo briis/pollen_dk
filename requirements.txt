@@ -1,8 +1,8 @@
 colorlog==6.10.1
-homeassistant==2026.5.2
+homeassistant==2026.6.1
 aiohasupervisor>=0.4.3
-pip>=26.1.1,<26.2
-ruff==0.15.13
+pip>=26.1.2,<26.2
+ruff==0.15.15
 numpy
 zlib_ng
 isal
