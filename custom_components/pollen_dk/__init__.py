@@ -27,6 +27,7 @@ PLATFORMS = ["sensor"]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
+
 def _manifest_version() -> str:
     try:
         manifest = json.loads((Path(__file__).parent / "manifest.json").read_text())
@@ -74,7 +75,9 @@ async def _register_card(hass: HomeAssistant) -> None:
             _LOGGER.debug("Pollen DK card already registered as Lovelace resource")
             return
         if url.startswith(_CARD_BASE_URL):
-            await resources.async_update_item(item["id"], {"res_type": "module", "url": _CARD_URL})
+            await resources.async_update_item(
+                item["id"], {"res_type": "module", "url": _CARD_URL}
+            )
             _LOGGER.debug("Updated Pollen DK card resource to %s", _CARD_URL)
             return
 
