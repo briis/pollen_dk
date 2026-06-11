@@ -7,6 +7,8 @@ Home Assistant custom integration that fetches **live pollen data** for Denmark 
 
 > **Disclaimer:** This integration is an independent community project and is not affiliated with, endorsed by, or in any way connected to Astma-Allergi Danmark.
 
+> **Requires Home Assistant 2026.6.0 or newer.**
+
 ---
 
 ## Features
@@ -196,6 +198,8 @@ Contributions are welcome! Open a pull request with your new language block and 
 ---
 
 ## Installation
+
+**Minimum requirement: Home Assistant 2026.6.0**
 
 ### Via HACS (recommended)
 
