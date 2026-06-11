@@ -13,5 +13,6 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/briis/pollen_dk/issues",
   "requirements": [],
+  "homeassistant": "2026.6.0",
   "version": "1.1.4"
 }
