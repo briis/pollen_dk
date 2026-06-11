@@ -2,6 +2,6 @@
   "name": "Pollen DK",
   "content_in_root": false,
   "render_readme": true,
-  "filename": "pollen_dk.zip",
-  "homeassistant": "2026.6.0"
+  "homeassistant": "2026.6.0",
+  "filename": "pollen_dk.zip"
 }
