@@ -674,5 +674,14 @@ if (!window.customCards.find((c) => c.type === "pollen-dk-card")) {
     description: "Viser pollenprognose fra Astma-Allergi Danmark",
     preview: true,
     documentationURL: "https://github.com/briis/pollen_dk",
+    getEntitySuggestion: (hass, entityId) => {
+      const state = hass.states[entityId];
+      if (!state?.attributes) return null;
+      const { pollen_type_da, pollen_levels, region: regionName } = state.attributes;
+      if (!pollen_type_da && !pollen_levels) return null;
+      const regionKey = Object.entries(REGION_NAMES).find(([, v]) => v === regionName)?.[0];
+      if (!regionKey) return null;
+      return { config: { type: "custom:pollen-dk-card", region: regionKey } };
+    },
   });
 }
