@@ -1,4 +1,4 @@
-# Pollen DK - Home Assistant Integration
+# ![logo](images/doc_icon.png) Pollen DK - Home Assistant Integration
 
 Home Assistant custom integration that fetches **live pollen data** for Denmark from **Astma-Allergi Danmarks** official JSON feed.
 
