@@ -5,6 +5,7 @@ pip>=26.1.2,<26.2
 ruff==0.15.19
 pytest==9.1.1
 pytest-asyncio==1.4.0
+pytest-homeassistant-custom-component
 numpy
 zlib_ng
 isal
