@@ -1,5 +1,9 @@
 # ![logo](images/doc_icon.png) Pollen DK - Home Assistant Integration
 
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/github/release/briis/pollen_dk.svg)](https://github.com/briis/ha_tuya_ble/releases)
+[![HA Version](https://img.shields.io/badge/Home%20Assistant-2026.6.x%2B-blue.svg)](https://www.home-assistant.io/)
+
 Home Assistant custom integration that fetches **live pollen data** for Denmark from **Astma-Allergi Danmarks** official JSON feed.
 
 > **Data source:** `https://www.astma-allergi.dk/umbraco/Api/PollenApi/GetPollenFeed`
