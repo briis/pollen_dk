@@ -1,4 +1,4 @@
-# ![logo](images/doc_icon.png) Pollen DK - Home Assistant Integration
+# <img src="https://raw.githubusercontent.com/briis/pollen_dk/refs/heads/main/images/doc_icon.png" align="center" alt="logo"> Pollen DK - Home Assistant Integration
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/release/briis/pollen_dk.svg)](https://github.com/briis/ha_tuya_ble/releases)
